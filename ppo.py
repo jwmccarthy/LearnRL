@@ -14,7 +14,7 @@ from rollout_buffer import RolloutBuffer
 
 class Policy(nn.Module):
 
-    def __init__(self, obs_dim, act_dim, learning_rate=3e-4):
+    def __init__(self, obs_dim, act_dim, learning_rate=3e-4, eps=1e-5):
 
         super(Policy, self).__init__()
         
@@ -36,7 +36,13 @@ class Policy(nn.Module):
             nn.Linear(64, act_dim)
         )
 
-        self.optimizer = Adam(self.parameters(), lr=learning_rate, eps=1e-5)
+        self.optimizer = Adam(self.parameters(), lr=learning_rate, eps=eps)
+
+    def get_value(self, obs):
+        obs_tensor = th.as_tensor(obs)
+        with th.no_grad():
+            value = self.critic(obs_tensor)
+        return value.item()
 
     def get_action_dist(self, obs):
         logits = self.actor(obs)
@@ -92,6 +98,9 @@ class PPO():
         self.val_coef = val_coef
         self.max_grad_norm = max_grad_norm
 
+        self.reward_means = []
+        self.length_means = []
+
     def collect_rollout(self):
         last_done = 0
         last_obs = self.env.reset()[0]
@@ -108,6 +117,10 @@ class PPO():
 
             next_obs, reward, term, trunc, _ = self.env.step(action)
             next_done = term or trunc
+
+            if next_done and not trunc:
+                term_val = self.policy.get_value(last_obs)
+                reward += self.gae_gamma * term_val
 
             self.rollout_buffer.add(
                 last_obs,
@@ -137,13 +150,13 @@ class PPO():
             last_value = self.policy.critic(obs_tensor)
         self.rollout_buffer.compute_advantages(last_value, last_done)
 
-        return np.round(np.mean(ep_lengths), 2), np.round(np.mean(ep_rewards), 2)
+        return np.mean(ep_lengths), np.mean(ep_rewards)
 
     def update(self):
         for _ in range(self.training_epochs):
             for minibatch in self.rollout_buffer.sample(self.minibatch_size):
                 observations = minibatch.observations
-                actions = minibatch.actions.long()
+                actions = minibatch.actions.long().flatten()
 
                 _, values, logprobs, _ = self.policy.evaluate_actions(observations, action=actions)
                 values = values.flatten()
@@ -168,7 +181,11 @@ class PPO():
 
                 self.policy.optimizer.zero_grad()
                 total_loss.backward()
-                nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+                # Clip grad norm
+                norm = th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
+                # print(norm)
+                # for param in self.policy.parameters():
+                #     print(param.grad.shape)                
                 self.policy.optimizer.step()
 
     def learn(self, total_timesteps):
@@ -177,7 +194,14 @@ class PPO():
         pbar = tqdm(range(num_updates))
         for _ in pbar:
             mean_ep_lengths, mean_ep_rewards = self.collect_rollout()
-            pbar.set_description(f"{mean_ep_lengths} : {mean_ep_rewards}")
+
+            self.reward_means.append(mean_ep_rewards)
+            self.length_means.append(mean_ep_lengths)
+
+            mean_rew = round(np.mean(self.reward_means), 2)
+            mean_len = round(np.mean(self.length_means), 2)
+            
+            pbar.set_description(f"{mean_len} : {mean_rew}")
             self.update()
 
     def predict(self, obs):
