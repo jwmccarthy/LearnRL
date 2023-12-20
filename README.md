@@ -4,7 +4,7 @@ This repo contains code related to my exploration into reinforcement learning. M
 ## Goal
 My ultimate goal is to create an RL-based bot in Rocket League. Several implementations already exist (see [Nexto](https://github.com/Rolv-Arild/Necto)), but I believe improvements can be made to the training methodologies which ultimately lead to a stronger, more human-like playstyle. I hypothesize that more advanced imitation learning techniques could be the key to imprinting human-level play on an RL Rocket League bot. I'm learning RL from the ground up, so keeping this end project in mind will help to focus my studies to specific areas and motivate me to learn!
 
-## Papers of Interest
+## Current Papers of Interest
 [[1](https://arxiv.org/abs/1606.03476)]
 Ho et al. (2016). 
 Generative Adversarial Imitation Learning.
