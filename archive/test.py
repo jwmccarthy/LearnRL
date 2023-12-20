@@ -1,12 +1,10 @@
 import gymnasium as gym
-# from stable_baselines3 import PPO
 from ppo import PPO
 
 # Create environment
 env = gym.make("LunarLander-v2", render_mode="rgb_array", enable_wind=False)
 
 # Instantiate the agent
-# model = PPO("MlpPolicy", env, verbose=1, policy_kwargs={"share_features_extractor": False, "ortho_init": False})
 model = PPO(env)
 
 # Train the agent and display a progress bar
