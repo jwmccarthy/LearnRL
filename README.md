@@ -5,3 +5,11 @@ This repo contains code related to my exploration into reinforcement learning. M
 [[1](https://arxiv.org/abs/1606.03476)]
 Ho et al. (2016). 
 Generative Adversarial Imitation Learning.
+
+[[2](https://arxiv.org/abs/1807.06158)]
+Torabi et al. (2018).
+Generative Adversarial Imitation from Observation.
+
+[[3](https://arxiv.org/abs/1803.05402)]
+Harmer et al. (2018).
+Imitation Learning with Concurrent Actions in 3D Games.
