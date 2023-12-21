@@ -3,7 +3,7 @@ import numpy as np
 import torch as th
 import torch.nn as nn
 import torch.optim as opt
-import torch.functional as F
+import torch.nn.functional as F
 from torch.distributions import Categorical
 
 import gymnasium as gym
@@ -182,18 +182,20 @@ def save_ppo_expert_demos():
         if term or trunc:
             obs = env.reset()[0]
 
-    with open("demos/state_tr.npy", "wb") as f:
+    with open("data/state_tr.npy", "wb") as f:
         np.save(f, states)
 
     return states
 
 def load_ppo_expert_demos():
-    demos = np.load("demos/state_tr.npy")
+    demos = np.load("data/state_tr.npy")
     return th.as_tensor(demos, dtype=th.float32)
 
 def create_state_transitions(states):
+    states = th.as_tensor(states)
     pairs = th.stack((states[:-1], states[1:]), dim=states.ndim-1)
-    return pairs.flatten(start_dim=pairs.ndim-1)
+    pairs = pairs.flatten(start_dim=pairs.ndim-2)
+    return pairs
 
 def sample_state_transitions(pairs, n=1):
     rand_idx = th.randperm(len(pairs))
@@ -210,6 +212,7 @@ expert_states = create_state_transitions(expert_states)
 
 # constants
 # DEVICE = "cuda"
+EPSILON = 0.2
 GAMMA = 0.99
 GAE_LAMBDA = 0.95
 EPOCHS = 10
@@ -242,6 +245,9 @@ def collect_rollout():
     last_starts = np.zeros((num_envs))
     last_obs, _ = vec_env.reset()
 
+    ep_length, ep_reward = 0, 0
+    ep_rewards, ep_lengths = [], []
+
     for t in range(BUFFER_SIZE):
 
         final_obs = np.zeros((num_envs, vec_env.single_observation_space.shape[0]))
@@ -255,9 +261,9 @@ def collect_rollout():
         next_starts = np.logical_or(terms, truncs)
 
         # bootstrap on episode termination
-        for i in range(len(terms)):
-            if terms[i] and not truncs[i]:
-                final_obs[i] = infos["final_observation"][i]
+        # for i in range(len(terms)):
+        #     if terms[i] and not truncs[i]:
+        #         final_obs[i] = infos["final_observation"][i]
         
         buffer.add(
             last_obs,
@@ -268,15 +274,23 @@ def collect_rollout():
             values,
             logprobs
         )
+
+        ep_length += 1
+        ep_reward += rewards[0]
+
+        if terms[0] or truncs[0]:
+            ep_lengths.append(ep_length)
+            ep_rewards.append(ep_reward)
+            ep_length, ep_reward = 0, 0
     
         last_starts = next_starts
         last_obs = next_obs
 
     # bootstrap in event of timeout
-    with th.no_grad():
-        obs_tensor = th.as_tensor(last_obs)
-        last_values = agent.get_value(obs_tensor)
-    buffer.compute_advantages(last_values, last_starts)
+    # with th.no_grad():
+    #     obs_tensor = th.as_tensor(last_obs)
+    #     last_values = agent.get_value(obs_tensor)
+    # buffer.compute_advantages(last_values, last_starts)
 
 
 # --- train ---
@@ -288,7 +302,6 @@ for t in range(TOTAL_TIMESTEPS):
 
     collect_rollout()
 
-    print(type(buffer.observations))
     agent_states = create_state_transitions(buffer.observations)
 
     # discriminator loss
@@ -298,8 +311,6 @@ for t in range(TOTAL_TIMESTEPS):
         agent_states = th.as_tensor(agent_states)
         for a_data, e_data in zip(sample_state_transitions(agent_states), 
                                   sample_state_transitions(expert_states, n=3)):
-            print(e_data.shape, a_data.shape)
-
             d_optim.zero_grad()
 
             # train w/ expert data
@@ -318,13 +329,49 @@ for t in range(TOTAL_TIMESTEPS):
     # set reward according to discriminator outputs
     print(agent_states.shape)
     buffer.reward = -th.log(discriminator(agent_states))
-    for i in range(buffer.buffer_size):
-        for env in range(num_envs):
-            term_obs = buffer.final_obs[i, env]
-            if not np.any(term_obs):
-                buffer.reward[i] += GAMMA * agent.get_value(term_obs)
+    # for i in range(buffer.buffer_size):
+    #     for env in range(num_envs):
+    #         term_obs = buffer.final_obs[i, env]
+    #         if not np.any(term_obs):
+    #             buffer.reward[i] += GAMMA * agent.get_value(term_obs)
+    buffer.compute_advantages()
 
-    break
+    for _ in range(EPOCHS):
+        for minibatch in buffer.sample(BATCH_SIZE):
+            observations = minibatch.observations
+            actions = minibatch.actions.long().flatten()
+
+            _, values, logprobs, _ = agent(observations, actions=actions)
+            values = values.flatten()
+
+            # normalize advantages
+            advantages = minibatch.advantages
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+            # logprob ratios
+            ratios = th.exp(logprobs - minibatch.logprobs)
+
+            # surrogate loss
+            policy_loss1 = advantages * ratios
+            policy_loss2 = advantages * th.clamp(ratios, 1 - EPSILON, 1 + EPSILON)
+            policy_loss = -th.min(policy_loss1, policy_loss2).mean()
+
+            # value loss
+            value_loss = F.mse_loss(minibatch.returns.flatten(), values)
+
+            # total loss
+            total_loss = policy_loss + 0.5 * value_loss
+
+            p_optim.zero_grad()
+            total_loss.backward()
+            # Clip grad norm
+            norm = th.nn.utils.clip_grad_norm_(agent.parameters(), 0.5)
+            # print(norm)
+            # for param in self.policy.parameters():
+            #     print(param.grad.shape)                
+            p_optim.step()
+
+    print(total_loss)
 
     # update policy via PPO updates with reward as first term in cross-entropy
     
