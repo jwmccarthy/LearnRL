@@ -9,7 +9,7 @@ tensor_ib = attr.ib(converter=th.as_tensor)
 
 class RolloutBuffer():
 
-    @attr.s(slots=True)
+    @attr.s(slots=True, converter=tensor_ib)
     class RolloutSample:
         states:     th.Tensor = tensor_ib
         actions:    th.Tensor = tensor_ib
