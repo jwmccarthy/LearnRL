@@ -7,6 +7,7 @@ __pycache__/
 *.so
 
 data/
+*.npy
 
 # Distribution / packaging
 .Python
