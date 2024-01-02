@@ -1,5 +1,6 @@
 import numpy as np
 import torch as th
+import torch.nn as nn
 import gymnasium as gym
 from gymnasium.spaces import (
     Discrete,
@@ -19,7 +20,7 @@ from torch.distributions import (
 
 def dist_index(action_space):
     if isinstance(action_space, Discrete):
-        return CategoricalDist(action_space)
+        return CategoricalDist()
     elif isinstance(action_space, Box):
         return None  # continuous via multivariate normal
     elif isinstance(action_space, MultiBinary):
@@ -32,10 +33,13 @@ def dist_index(action_space):
         raise NotImplementedError 
 
 
-class CategoricalDist(Distribution):
+class CategoricalDist(nn.Module):
 
-    # TODO #2
-    def forward(self, logits, actions=None):
+    def __init__(self):
+        super(CategoricalDist, self).__init__()
+
+    # Relocate to base class?
+    def forward(self, logits, actions):
         dist = Categorical(logits=logits)
         if actions is None:
             actions = dist.sample()
@@ -44,19 +48,19 @@ class CategoricalDist(Distribution):
         return actions, logprobs, entropy
     
 
-class DiagGaussianDist(Distribution):
+class DiagGaussianDist(nn.Module):
 
     def forward(self, logits, actions=None):
         pass
 
 
-class BernoulliDist(Distribution):
+class BernoulliDist(nn.Module):
 
     def forward(self, logits, actions=None):
         pass
 
 
-class MultiCategoricalDist(Distribution):
+class MultiCategoricalDist(nn.Module):
 
     def forward(self, logits, actions=None):
         pass

@@ -1,8 +1,0 @@
-1.  [-] env wrapper for cleaner data dimension retrieval
-2.  [-] base class for distributions to implement forward method
-     - determine if actually same for each class
-3.  [-] factory notation for building agents
-     - eg. Agent().add_cnn_extractor().ortho_init().build()
-     - priority queue system for adding characteristics in unordered way
-4.  [-] buffer as argument for RolloutCollector rather than implicit initialization
-5.  [-] episode-based monitoring within RolloutCollector
