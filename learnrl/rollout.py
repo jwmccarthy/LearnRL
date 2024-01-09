@@ -1,6 +1,6 @@
 import numpy as np
 import torch as th
-from utils import to_tensor, DTYPE, TensorBuffer
+from utils import to_tensor, TensorBuffer
 
 
 class RolloutCollector:
@@ -37,7 +37,7 @@ class RolloutCollector:
     def collect(self):
         last_states = self.env.reset()
         curr_states = th.zeros_like(last_states)
-        last_starts = th.zeros((self.num_envs), dtype=DTYPE)
+        last_starts = th.zeros((self.num_envs), dtype=th.bool)
 
         for t in range(self.size):
             
