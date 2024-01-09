@@ -26,7 +26,7 @@ class TensorBuffer:
 
     def get(self, *args):
         return TensorBuffer(**{
-            k: self.__dict__.get(k) for k in args
+            k: self[k] for k in args
         })
 
     def gpu(self, device="cuda"):
@@ -51,11 +51,11 @@ class TensorBuffer:
     
     def __setitem__(self, idx, val):
         if isinstance(idx, str):
-            return self.__dict__[idx] = val
+            self.__dict__[idx] = val
         else:
             for i, value in enumerate(self.__dict__.values()):
                 value[idx] = val[i]
 
     def __repr__(self):
-        kv_strs = [f"\n    {k}: {v.shape}" for k, v in self.__dict__.items()]
-        return "TensorBuffer({}\n)".format(",".join(kv_strs))
+        kv_strs = [f"\n{k:>12}: Tensor{tuple(v.shape)}" for k, v in self.__dict__.items()]
+        return "TensorBuffer({}\n)".format("".join(kv_strs))

@@ -33,3 +33,5 @@ if __name__ == "__main__":
     collector = RolloutCollector(env, agent_module, ROLLOUT_SIZE)
 
     print(collector.buffer.flatten())
+    print(collector.buffer["states"])
+    print(collector.buffer[0].get("actions", "states"))
