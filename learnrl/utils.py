@@ -42,13 +42,19 @@ class TensorBuffer:
             value = th.zeros_like(value)
 
     def __getitem__(self, idx):
-        return TensorBuffer(**{
-            k: v[idx] for k, v in self.__dict__.items()
-        })
+        if isinstance(idx, str):
+            return self.__dict__.get(idx)
+        else:
+            return TensorBuffer(**{
+                k: v[idx] for k, v in self.__dict__.items()
+            })
     
     def __setitem__(self, idx, val):
-        for i, value in enumerate(self.__dict__.values()):
-            value[idx] = val[i]
+        if isinstance(idx, str):
+            return self.__dict__[idx] = val
+        else:
+            for i, value in enumerate(self.__dict__.values()):
+                value[idx] = val[i]
 
     def __repr__(self):
         kv_strs = [f"\n    {k}: {v.shape}" for k, v in self.__dict__.items()]
