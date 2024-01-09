@@ -5,7 +5,8 @@ from gymnasium.spaces import (
     Dict,
     Discrete,
     MultiBinary,
-    MultiDiscrete
+    MultiDiscrete,
+    flatdim
 )
 from utils import to_tensor
 
@@ -33,6 +34,7 @@ class SyncTorchEnv(SyncVectorEnv):
             copy
         )
 
+        self.flat_dim = flatdim(self.single_observation_space)
         self.state_dim = self.single_observation_space.shape
         self.action_dim = self.single_action_space.shape
         self.logit_dim = logit_dim(self.single_action_space)

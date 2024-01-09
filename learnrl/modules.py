@@ -20,7 +20,7 @@ def dims_to_sequential(in_dim, hidden_dims, out_dim, act_func):
 
 class AgentModule(nn.Module):
 
-    def __init__(self, network, action_space):
+    def __init__(self, network, action_space, state_key="states"):
         super(AgentModule, self).__init__()
         self.network = network
         self.action_dist = dist_index(action_space)
@@ -33,7 +33,7 @@ class AgentModule(nn.Module):
 
 class CriticModule(nn.Module):
 
-    def __init__(self, network):
+    def __init__(self, network, state_key="states"):
         super(CriticModule, self).__init__()
         self.network = network
 

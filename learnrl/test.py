@@ -12,10 +12,8 @@ ROLLOUT_SIZE = 2048
 if __name__ == "__main__":
     env = SyncTorchEnv(3 * [lambda: gym.make("LunarLander-v2")])
 
-    flat_state_dim = gym.spaces.flatdim(env.single_observation_space)
-
     agent_net = nn.Sequential(
-        nn.Linear(flat_state_dim, 64),
+        nn.Linear(env.flat_dim, 64),
         nn.ReLU(),
         nn.Linear(64, 64),
         nn.ReLU(),
@@ -24,7 +22,7 @@ if __name__ == "__main__":
     agent_module = AgentModule(agent_net, env.single_action_space)
 
     critic_net = nn.Sequential(
-        nn.Linear(flat_state_dim, 64),
+        nn.Linear(env.flat_dim, 64),
         nn.ReLU(),
         nn.Linear(64, 64),
         nn.ReLU(),
@@ -32,4 +30,6 @@ if __name__ == "__main__":
     )
     critic_module = CriticModule(critic_net)
 
-    ppo = PPO()
+    collector = RolloutCollector(env, agent_module, ROLLOUT_SIZE)
+
+    print(collector.buffer.flatten())
