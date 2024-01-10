@@ -55,6 +55,7 @@ class PPO:
     def _calc_gae(self, buffer):
         adv = th.zeros((self.collector.num_envs), dtype=th.float32)
 
+        # Incorporate boostrapping on termination here?
         for i in reversed(range(self.collector.size)):
             b = buffer[i]
             adv = b.rewards \
