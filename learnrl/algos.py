@@ -20,6 +20,8 @@ class PPO:
         self.gae_lambda = gae_lambda
 
     def learn(self, total_timesteps):
+        # TODO: Probably no need for setting buffer attribute
+        # Passing by reference to local-scope buffer var is fine
         self.buffer = self.collector.collect()
 
         # let critic evaluate states from rollout
@@ -30,7 +32,6 @@ class PPO:
         # Option 1: Initialize these elsewhere and add to buffer via dict
         # Option 2: Pass buffers to modules and let them add "out_keys"
         self.buffer.advantages = th.zeros_like(self.buffer.rewards)
-        self.buffer.returns = th.zeros_like(self.buffer.rewards)
 
         self._calc_gae()
 
