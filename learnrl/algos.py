@@ -9,6 +9,8 @@ class PPO:
         agent,
         critic,
         collector,
+        epochs=8,
+        batch_size=64,
         gamma=0.99,
         gae_lambda=0.95
     ):
@@ -16,38 +18,52 @@ class PPO:
         self.critic = critic
         self.collector = collector
 
+        self.epochs = epochs
+        self.batch_size = batch_size
         self.gamma = gamma
         self.gae_lambda = gae_lambda
 
     def learn(self, total_timesteps):
-        # TODO: Probably no need for setting buffer attribute
-        # Passing by reference to local-scope buffer var is fine
-        self.buffer = self.collector.collect()
+        t = 0
 
-        # let critic evaluate states from rollout
-        self.buffer.values = self.critic(self.buffer.states)
-        self.buffer.next_values = self.critic(self.buffer.next_states)
+        while t < total_timesteps:
+            buffer = self.collector.collect()
 
-        # TODO: Edit way buffers are handled
-        # Option 1: Initialize these elsewhere and add to buffer via dict
-        # Option 2: Pass buffers to modules and let them add "out_keys"
-        self.buffer.advantages = th.zeros_like(self.buffer.rewards)
+            # let critic evaluate states from rollout
+            buffer.values = self.critic(buffer.states)
+            buffer.next_values = self.critic(buffer.next_states)
 
-        self._calc_gae()
+            # TODO: Edit way buffers are handled
+            # Option 1: Initialize these elsewhere and add to buffer via dict
+            # Option 2: Pass buffers to modules and let them add "out_keys"
+            buffer.advantages = th.zeros_like(buffer.rewards)
 
-    def _update(self):
-        pass
+            self._calc_gae(buffer)
 
-    def _calc_gae(self):
+            for e in range(self.epochs):
+                self._update(buffer)
+                break
+
+            break
+
+    def _update(self, buffer):
+        for b in self.collector.sample(self.batch_size):
+            print(b)
+            break
+
+
+    def _calc_gae(self, buffer):
         adv = th.zeros((self.collector.num_envs), dtype=th.float32)
 
         for i in reversed(range(self.collector.size)):
-            b = self.buffer[i]
+            b = buffer[i]
             adv = b.rewards \
                 + self.gamma * b.next_values * (1 - b.starts) \
                 - b.values \
                 + self.gamma * self.gae_lambda * adv * (1 - b.starts)
-            
-            self.buffer.advantages[i] = adv
+            buffer.advantages[i] = adv
 
-        self.buffer.returns = self.buffer.advantages + self.buffer.values
+        buffer.returns = buffer.advantages + buffer.values
+
+    def _normalize_adv(self, adv):
+        return (adv - adv.mean()) / (adv.std() + 1e-8)

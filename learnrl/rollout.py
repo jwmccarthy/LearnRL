@@ -76,4 +76,4 @@ class RolloutCollector:
         for batch_start in range(0, self.size, batch_size // self.num_envs):
             batch_end = batch_start + batch_size
             batch_inds = random_inds[batch_start:batch_end]
-            yield self.buffer[batch_inds]
+            yield self.buffer[batch_inds].flatten()
