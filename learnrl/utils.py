@@ -41,6 +41,9 @@ class TensorBuffer:
         for value in self.__dict__.values():
             value = th.zeros_like(value)
 
+    def __len__(self):
+        return len(next(iter(self.__dict__.values())))
+
     def __getitem__(self, idx):
         if isinstance(idx, str):
             return self.__dict__.get(idx)
@@ -56,6 +59,27 @@ class TensorBuffer:
             for i, value in enumerate(self.__dict__.values()):
                 value[idx] = val[i]
 
+    def __iter__(self):
+        return TensorBufferIterator(self)
+
     def __repr__(self):
         kv_strs = [f"\n{k:>12}: Tensor{tuple(v.shape)}" for k, v in self.__dict__.items()]
         return "TensorBuffer({}\n)".format("".join(kv_strs))
+    
+
+class TensorBufferIterator:
+
+    def __init__(self, buffer):
+        self.index = 0
+        self.buffer = buffer
+
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        try:
+            result = self.buffer[self.index]
+        except:
+            raise StopIteration
+        self.index += 1
+        return result

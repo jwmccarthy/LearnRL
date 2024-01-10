@@ -7,28 +7,25 @@ from distributions import dist_index
 
 class AgentModule(nn.Module):
 
-    def __init__(self, network, action_space, in_key="states"):
+    def __init__(self, network, action_space):
         super(AgentModule, self).__init__()
         self.network = network
-        self.in_key = in_key
         self.action_dist = dist_index(action_space)
 
-    def forward(self, buffer, actions=None):
-        logits = self.network(buffer[self.in_key])
+    def forward(self, states, actions=None):
+        logits = self.network(states)
         actions, logprobs, entropy = self.action_dist(logits, actions=actions)
         return actions, logprobs, entropy
     
 
 class CriticModule(nn.Module):
 
-    def __init__(self, network, in_key="states", out_key="values"):
+    def __init__(self, network):
         super(CriticModule, self).__init__()
         self.network = network
-        self.in_key = in_key
-        self.out_key = out_key
 
-    def forward(self, buffer):
-        buffer[self.out_key] = self.network(buffer[self.in_key])
+    def forward(self, states):
+        return self.network(states).squeeze()
 
 
 class DiscriminatorModule(nn.Module):
