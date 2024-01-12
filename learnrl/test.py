@@ -11,7 +11,7 @@ ROLLOUT_SIZE = 2048
 
 
 if __name__ == "__main__":
-    env = SyncTorchEnv(1 * [lambda: gym.make("LunarLander-v2")])
+    env = SyncTorchEnv("LunarLander-v2")
 
     agent_net = nn.Sequential(
         nn.Linear(env.flat_dim, 64),
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     ppo.learn(int(1e6))
 
     # test env
-    env = SyncTorchEnv([lambda: gym.make("LunarLander-v2", render_mode="human")])
+    env = SyncTorchEnv("LunarLander-v2", render_mode="human")
 
     state = env.reset()
     for i in range(10000):

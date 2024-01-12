@@ -1,4 +1,5 @@
 import torch as th
+import gymnasium as gym
 from gymnasium.vector import SyncVectorEnv
 from gymnasium.spaces import (
     Box,
@@ -22,13 +23,15 @@ class SyncTorchEnv(SyncVectorEnv):
 
     def __init__(
         self,
-        env_fns,
+        env_id,
+        num_envs=1,
+        render_mode=None,
         observation_space=None,
         action_space=None,
         copy=True
     ):
         super(SyncTorchEnv, self).__init__(
-            env_fns,
+            num_envs * [lambda: gym.make(env_id, render_mode=render_mode)],
             observation_space,
             action_space,
             copy
