@@ -19,6 +19,8 @@ class PPO:
         eps=0.2,
         gamma=0.99,
         gae_lambda=0.95,
+        val_coef=0.5,
+        ent_coef=0.0,
         max_grad_norm=0.5,
         optimizer=opt.Adam
     ):
@@ -32,10 +34,12 @@ class PPO:
         self.eps = eps
         self.gamma = gamma
         self.gae_lambda = gae_lambda
+        self.val_coef = val_coef
+        self.ent_coef = ent_coef
         self.max_grad_norm = max_grad_norm
 
         self.params = list(self.agent.parameters()) + list(self.critic.parameters())
-        self.optimizer = optimizer(self.params, lr=lr)
+        self.optimizer = optimizer(self.params, lr=lr, eps=1e-5)
 
     def learn(self, total_timesteps):
         t = 0
@@ -54,6 +58,12 @@ class PPO:
             with th.no_grad():
                 buffer.values = self.critic(buffer.states)
                 buffer.next_values = self.critic(buffer.next_states)
+            
+            # bootstrap for term and not trunc
+            boot_idx = ~buffer.terms.bool() & buffer.truncs.bool()
+            buffer.rewards[boot_idx] = buffer.next_values[boot_idx]
+
+            # buffer.rewards[terms] += self.gamma * buffer.next_values[terms]
 
             # TODO: Edit way buffers are handled
             # Option 1: Initialize these elsewhere and add to buffer via dict
@@ -88,8 +98,13 @@ class PPO:
             # value loss
             value_loss = F.mse_loss(b.returns, values)
 
+            # entropy loss
+            entropy_loss = -th.mean(entropy)
+
             # step optimizer
-            total_loss = policy_loss + 0.5 * value_loss
+            total_loss = policy_loss \
+                       + self.val_coef * value_loss \
+                       + self.ent_coef * entropy_loss
             self.optimizer.zero_grad()
             total_loss.backward()
 

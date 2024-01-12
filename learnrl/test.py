@@ -15,18 +15,18 @@ if __name__ == "__main__":
 
     agent_net = nn.Sequential(
         nn.Linear(env.flat_dim, 64),
-        nn.ReLU(),
+        nn.Tanh(),
         nn.Linear(64, 64),
-        nn.ReLU(),
+        nn.Tanh(),
         nn.Linear(64, env.logit_dim)
     )
     agent_module = AgentModule(agent_net, env.single_action_space)
 
     critic_net = nn.Sequential(
         nn.Linear(env.flat_dim, 64),
-        nn.ReLU(),
+        nn.Tanh(),
         nn.Linear(64, 64),
-        nn.ReLU(),
+        nn.Tanh(),
         nn.Linear(64, 1)
     )
     critic_module = CriticModule(critic_net)

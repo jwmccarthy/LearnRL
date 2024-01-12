@@ -31,8 +31,9 @@ class CriticModule(nn.Module):
 
 class DiscriminatorModule(nn.Module):
 
-    def __init__(self):
+    def __init__(self, network):
         super(DiscriminatorModule, self).__init__()
+        self.network = network
 
-    def forward(self, x):
-        pass
+    def forward(self, pairs):
+        return self.network(pairs).squeeze(dim=-1)
