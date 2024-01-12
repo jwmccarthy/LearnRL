@@ -11,7 +11,7 @@ ROLLOUT_SIZE = 2048
 
 
 if __name__ == "__main__":
-    env = SyncTorchEnv(3 * [lambda: gym.make("LunarLander-v2")])
+    env = SyncTorchEnv(1 * [lambda: gym.make("LunarLander-v2")])
 
     agent_net = nn.Sequential(
         nn.Linear(env.flat_dim, 64),
@@ -32,18 +32,17 @@ if __name__ == "__main__":
     critic_module = CriticModule(critic_net)
 
     collector = RolloutCollector(env, agent_module, ROLLOUT_SIZE)
-    buffer = collector.collect()
-
-    print(buffer.flatten())
-    print(buffer["states"])
-    print(buffer[0].get("actions", "states"))
-
-    for b in reversed(buffer):
-        print(b)
-        break
 
     ppo = PPO(agent_module, critic_module, collector)
 
-    ppo.learn(1)
+    ppo.learn(int(1e6))
 
-    print(buffer[1])
+    # test env
+    env = SyncTorchEnv([lambda: gym.make("LunarLander-v2", render_mode="human")])
+
+    state = env.reset()
+    for i in range(10000):
+        action, _, _ = agent_module(state)
+        state, _, term, trunc, _ = env.step(action)
+        if term or trunc:
+            state = env.reset()

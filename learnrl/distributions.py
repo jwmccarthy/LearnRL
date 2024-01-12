@@ -22,11 +22,11 @@ def dist_index(action_space):
     if isinstance(action_space, Discrete):
         return CategoricalDist()
     elif isinstance(action_space, Box):
-        return None  # continuous via multivariate normal
+        return DiagGaussianDist()
     elif isinstance(action_space, MultiBinary):
-        return None  # bernoulli
+        return BernoulliDist()
     elif isinstance(action_space, MultiDiscrete):
-        return None  # multicategorical
+        return MultiCategoricalDist()
     elif isinstance(action_space, Dict):
         return None  # not sure yet
     else:

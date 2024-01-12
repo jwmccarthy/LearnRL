@@ -19,10 +19,10 @@ class RolloutCollector:
         self.num_envs = self.env.num_envs
         self.state_dim = self.env.state_dim
         self.action_dim = self.env.action_dim
-        
+
+    def collect(self):
         # init buffer
         buffer_dim = (self.size, self.num_envs)
-
         self.buffer = TensorBuffer.from_dims(
             states=buffer_dim + self.state_dim,
             next_states=buffer_dim + self.state_dim,
@@ -34,13 +34,16 @@ class RolloutCollector:
             starts=buffer_dim
         )
 
-    def collect(self):
         last_states = self.env.reset()
         curr_states = th.zeros_like(last_states)
         last_starts = th.zeros((self.num_envs), dtype=th.bool)
 
-        for t in range(self.size):
-            
+        # logging
+        ep_rewards, ep_lengths = [], []
+        ep_reward = np.zeros((self.num_envs))
+        ep_length = np.zeros((self.num_envs))
+
+        for t in range(self.size):            
             with th.no_grad():
                 actions, logprobs, _ = self.agent(last_states)
 
@@ -48,8 +51,18 @@ class RolloutCollector:
 
             # retain last state upon reset
             for i, (term, trunc) in enumerate(zip(terms, truncs)):
+
+                # update episode stats
+                ep_reward[i] += rewards[i]
+                ep_length[i] += 1
+
                 if term or trunc:
                     curr_states[i] = to_tensor(infos["final_observation"][i])
+
+                    # log episode rewards, lengths
+                    ep_rewards.append(ep_reward[i])
+                    ep_lengths.append(ep_length[i])
+                    ep_reward[i], ep_length[i] = 0, 0
                 else:
                     curr_states[i] = next_states[i]
 
@@ -68,7 +81,7 @@ class RolloutCollector:
             last_starts = terms | truncs
             last_states = next_states
 
-        return self.buffer
+        return self.buffer, np.mean(ep_rewards), np.mean(ep_lengths)
         
     def sample(self, batch_size):
         random_inds = np.random.permutation(self.size)
