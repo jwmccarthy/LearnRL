@@ -5,6 +5,7 @@ from envs import SyncTorchEnv
 from modules import AgentModule, CriticModule
 from rollout import RolloutCollector
 from algos import PPO
+from utils import stack_states
 
 
 ROLLOUT_SIZE = 2048
@@ -40,9 +41,9 @@ if __name__ == "__main__":
     # test env
     env = SyncTorchEnv("LunarLander-v2", render_mode="human")
 
-    state = env.reset()
-    for i in range(10000):
+    states = env.reset()
+    for i in range(ROLLOUT_SIZE):
         action, _, _ = agent_module(state)
-        state, _, term, trunc, _ = env.step(action)
+        states, _, term, trunc, _ = env.step(action)
         if term or trunc:
             state = env.reset()

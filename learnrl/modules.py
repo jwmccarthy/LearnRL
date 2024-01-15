@@ -35,5 +35,5 @@ class DiscriminatorModule(nn.Module):
         super(DiscriminatorModule, self).__init__()
         self.network = network
 
-    def forward(self, pairs):
-        return self.network(pairs).squeeze(dim=-1)
+    def forward(self, state_pairs):
+        return self.network(state_pairs).squeeze(dim=-1)

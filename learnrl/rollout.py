@@ -82,11 +82,3 @@ class RolloutCollector:
             last_states = next_states
 
         return self.buffer, np.mean(ep_rewards), np.mean(ep_lengths)
-        
-    def sample(self, batch_size):
-        random_inds = np.random.permutation(self.size)
-
-        for batch_start in range(0, self.size, batch_size // self.num_envs):
-            batch_end = batch_start + batch_size
-            batch_inds = random_inds[batch_start:batch_end]
-            yield self.buffer[batch_inds].flatten()
