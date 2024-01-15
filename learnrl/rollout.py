@@ -22,6 +22,8 @@ class RolloutCollector:
 
     def collect(self):
         # init buffer
+        # TODO: Do this in such as way as to accommodate added tensors
+        # Not efficient to create a new one every time
         buffer_dim = (self.size, self.num_envs)
         self.buffer = TensorBuffer.from_dims(
             states=buffer_dim + self.state_dim,
