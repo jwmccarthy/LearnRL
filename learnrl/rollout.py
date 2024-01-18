@@ -45,7 +45,7 @@ class RolloutCollector:
         ep_reward = np.zeros((self.num_envs))
         ep_length = np.zeros((self.num_envs))
 
-        for t in range(self.size):            
+        for t in range(self.size):      
             with th.no_grad():
                 actions, logprobs, _ = self.agent(last_states)
 

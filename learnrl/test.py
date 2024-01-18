@@ -1,11 +1,9 @@
+import torch as th
 import torch.nn as nn
-import gymnasium as gym
-
 from envs import SyncTorchEnv
-from modules import AgentModule, CriticModule
+from modules import AgentModule, CriticModule, DiscriminatorModule
 from rollout import RolloutCollector
-from algos import PPO
-from utils import stack_states
+from algos import GAIFO
 
 
 ROLLOUT_SIZE = 2048
@@ -32,18 +30,37 @@ if __name__ == "__main__":
     )
     critic_module = CriticModule(critic_net)
 
+    discrim_net = nn.Sequential(
+        nn.Linear(env.flat_dim*2, 64),
+        nn.Tanh(),
+        nn.Linear(64, 64),
+        nn.Tanh(),
+        nn.Linear(64, 1),
+        nn.Sigmoid()
+    )
+    discrim_module = DiscriminatorModule(discrim_net)
+
     collector = RolloutCollector(env, agent_module, ROLLOUT_SIZE)
 
-    ppo = PPO(agent_module, critic_module, collector)
+    expert_demos = th.load("expert_demos.pt")
 
-    ppo.learn(int(1e6))
+    gaifo = GAIFO(
+        agent_module, 
+        critic_module,
+        DiscriminatorModule(discrim_net),
+        collector,
+        expert_demos,
+        ent_coef=0.1
+    )
+
+    gaifo.learn(int(1e6))
 
     # test env
     env = SyncTorchEnv("LunarLander-v2", render_mode="human")
 
     states = env.reset()
-    for i in range(ROLLOUT_SIZE):
-        action, _, _ = agent_module(state)
+    for i in range(100000):
+        action, _, _ = agent_module(states)
         states, _, term, trunc, _ = env.step(action)
         if term or trunc:
-            state = env.reset()
+            states = env.reset()
