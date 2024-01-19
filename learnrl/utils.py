@@ -30,13 +30,13 @@ class TensorBuffer:
             k: self[k] for k in args
         })
 
-    def gpu(self, device="cuda"):
-        for value in self.__dict__.values():
-            value = value.to(device)
+    def to(self, device):
+        for key, value in self.__dict__.items():
+            self[key] = value.to(device)
 
     def cpu(self):
-        for value in self.__dict__.values():
-            value = value.cpu()
+        for key, value in self.__dict__.items():
+            self[key] = value.cpu()
 
     def clone(self):
         return TensorBuffer(**{
@@ -44,8 +44,8 @@ class TensorBuffer:
         })
 
     def reset(self):
-        for value in self.__dict__.values():
-            value = th.zeros_like(value)
+        for key, value in self.__dict__.items():
+            self[key] = th.zeros_like(value)
 
     @property
     def shape(self):

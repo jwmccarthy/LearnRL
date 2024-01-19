@@ -1,5 +1,6 @@
 import numpy as np
 import torch as th
+from tqdm import tqdm
 from utils import to_tensor, TensorBuffer
 
 
@@ -9,10 +10,14 @@ class RolloutCollector:
         self,
         env,
         agent,
+        critic,
         size
     ):
+        self.device = th.device("cuda")
+
         self.env = env
         self.agent = agent
+        self.critic = critic
 
         # buffer dims
         self.size = size
@@ -33,7 +38,9 @@ class RolloutCollector:
             logprobs=buffer_dim,
             terms=buffer_dim,
             truncs=buffer_dim,
-            starts=buffer_dim
+            starts=buffer_dim,
+            values=buffer_dim,
+            next_values=buffer_dim
         )
 
         last_states = self.env.reset()
@@ -45,9 +52,10 @@ class RolloutCollector:
         ep_reward = np.zeros((self.num_envs))
         ep_length = np.zeros((self.num_envs))
 
-        for t in range(self.size):      
+        for t in tqdm(range(self.size), leave=False):      
             with th.no_grad():
-                actions, logprobs, _ = self.agent(last_states)
+                actions, logprobs, _ = self.agent(last_states.to(self.device))
+                print(actions)
 
             next_states, rewards, terms, truncs, infos = self.env.step(actions)
 
@@ -68,6 +76,11 @@ class RolloutCollector:
                 else:
                     curr_states[i] = next_states[i]
 
+            # evaluate states
+            with th.no_grad():
+                values = self.critic(last_states.to(self.device))
+                next_values = self.critic(curr_states.to(self.device))
+
             # add all values to buffer
             self.buffer[t] = (
                 last_states,
@@ -77,7 +90,9 @@ class RolloutCollector:
                 logprobs,
                 terms,
                 truncs,
-                last_starts
+                last_starts,
+                values,
+                next_values
             )
 
             last_starts = terms | truncs

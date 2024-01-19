@@ -25,8 +25,10 @@ class PPO:
         max_grad_norm=0.5,
         optimizer=opt.Adam
     ):
-        self.agent = agent
-        self.critic = critic
+        self.device = th.device("cuda")
+
+        self.agent = agent.to(self.device)
+        self.critic = critic.to(self.device)
         self.collector = collector
 
         self.epochs = epochs
@@ -59,20 +61,16 @@ class PPO:
 
             self._calc_gae(buffer)
 
+            buffer.to(self.device)
             for e in range(self.epochs):
-                for b in batch_sample(self.collector.buffer, self.batch_size):
+                for b in batch_sample(buffer, self.batch_size):
                     self._update(b.flatten())
 
             time_elapsed = self.collector.num_envs * self.collector.size
             t += time_elapsed
             pbar.update(time_elapsed)
 
-    def _pre_update(self, buffer):
-        # let critic evaluate states from rollout
-        with th.no_grad():
-            buffer.values = self.critic(buffer.states)
-            buffer.next_values = self.critic(buffer.next_states)
-        
+    def _pre_update(self, buffer):        
         # TODO: Include typing in buffer class to avoid conversions like this
         # bootstrap for term and not trunc
         boot_idx = ~buffer.terms.bool() & buffer.truncs.bool()

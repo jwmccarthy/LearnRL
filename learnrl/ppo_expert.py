@@ -9,43 +9,39 @@ from algos import PPO
 from utils import stack_states
 
 
-ROLLOUT_SIZE = 4096
+ROLLOUT_SIZE = 2048
 
 
 if __name__ == "__main__":
-    env = SyncTorchEnv("ALE/Asteroids-v5", num_envs=3)
+    env = SyncTorchEnv("ALE/Asteroids-v5", num_envs=1)
 
     # Training Expert
 
     agent_net = nn.Sequential(
-        nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
         nn.Tanh(),
-        nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
         nn.Tanh(),
         nn.Flatten(),
-        nn.Linear(env.state_dim[0] * env.state_dim[1] * 16, 64),
+        nn.Linear(env.state_dim[0] * env.state_dim[1] * 32, 64),
         nn.Tanh(),
-        nn.Linear(64, 32),
-        nn.Tanh(),
-        nn.Linear(32, 1)
+        nn.Linear(64, 1)
     )
     agent_module = AgentModule(agent_net, env.single_action_space)
 
     critic_net = nn.Sequential(
-        nn.Conv2d(in_channels=3, out_channels=8, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
         nn.Tanh(),
-        nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
         nn.Tanh(),
         nn.Flatten(),
-        nn.Linear(env.state_dim[0] * env.state_dim[1] * 16, 64),
+        nn.Linear(env.state_dim[0] * env.state_dim[1] * 32, 64),
         nn.Tanh(),
-        nn.Linear(64, 32),
-        nn.Tanh(),
-        nn.Linear(32, 1)
+        nn.Linear(64, 1)
     )
     critic_module = CriticModule(critic_net)
 
-    collector = RolloutCollector(env, agent_module, ROLLOUT_SIZE)
+    collector = RolloutCollector(env, agent_module, critic_module, ROLLOUT_SIZE)
 
     ppo = PPO(
         agent_module, 
@@ -58,7 +54,7 @@ if __name__ == "__main__":
 
     # Collect Expert Demos
 
-    expert_collector = RolloutCollector(env, agent_module, 50000)
+    expert_collector = RolloutCollector(env, agent_module, critic_module, 50000)
     buffer, _, _ = expert_collector.collect()
 
     # create demo pairs

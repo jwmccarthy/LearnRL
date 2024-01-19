@@ -14,8 +14,7 @@ class AgentModule(nn.Module):
         self.action_dist = dist_index(action_space)
 
     def forward(self, states, actions=None):
-        states = states.permute(0, 3, 1, 2)
-        print(states.shape)
+        states = states.transpose(-1, -3)
         logits = self.network(states)
         actions, logprobs, entropy = self.action_dist(logits, actions=actions)
         return actions, logprobs, entropy
@@ -28,7 +27,7 @@ class CriticModule(nn.Module):
         self.network = network
 
     def forward(self, states):
-        states = states.permute(0, 3, 1, 2)
+        states = states.transpose(-1, -3)
         return self.network(states).squeeze(dim=-1)
 
 
@@ -38,6 +37,6 @@ class DiscriminatorModule(nn.Module):
         super(DiscriminatorModule, self).__init__()
         self.network = network
 
-    def forward(self, state_pairs):
-        states = states.permute(0, 3, 1, 2)
-        return self.network(state_pairs).squeeze(dim=-1)
+    def forward(self, states):
+        states = states.transpose(-1, -3)
+        return self.network(states).squeeze(dim=-1)
